@@ -1,8 +1,10 @@
+# Public URL: https://pol-dashboard.streamlit.app/
 import streamlit as st
 import pandas as pd
 import duckdb
 import plotly.express as px
 import numpy as np
+import sys
 
 st.set_page_config(
     page_title="Progressive Overload Dashboard",
@@ -25,15 +27,13 @@ def load_data(path:str):
 
     # replace Date column with Month, Day, and Year
     data['Date'] = pd.to_datetime(data['Date'])
-    data['Month'] = data['Date'].dt.month
-    data['Day'] = data['Date'].dt.day
-    data['Year'] = data['Date'].dt.year
+    # data['Month'] = data['Date'].dt.month
+    # data['Day'] = data['Date'].dt.day
+    # data['Year'] = data['Date'].dt.year
 
     # drop columns
     data = data[[
-        'Month',
-        'Day',
-        'Year',
+        'Date',
         'Workout_Name',
         'Exercise_Name',
         'Weight',
@@ -59,8 +59,8 @@ df = load_data(uploaded_file)
 # Filters
 with st.sidebar: 
     exercise = st.selectbox(label="Select an Exercise", options=np.sort(df['Exercise_Name'].unique()))
-    dateStart = st.date_input("Starting Date")
-    dateEnd = st.date_input("Ending Date")
+    dateStart_str = st.date_input("Starting Date").strftime("%Y-%m-%d")
+    dateEnd_str = st.date_input("Ending Date").strftime("%Y-%m-%d")
 
 # Visualizations
 df_filtered = duckdb.sql(
@@ -70,13 +70,11 @@ f"""
     FROM 
         df
     WHERE 
-        MONTH BETWEEN {dateStart.month} AND {dateEnd.month}
-    AND DAY BETWEEN {dateStart.day} AND {dateEnd.day}
-    AND YEAR BETWEEN {dateStart.year} AND {dateStart.year}
-    AND EXERCISE_NAME = '{exercise}'
+        Date BETWEEN DATE '{dateStart_str}' AND DATE '{dateEnd_str}'
+        AND EXERCISE_NAME = '{exercise}'
 """
-)
-
+).fetchdf()
+print(df_filtered)
 # debugging
 # st.dataframe(df_filtered)
 
@@ -86,7 +84,7 @@ maxWeightdf = duckdb.sql(
     SELECT
         WEIGHT,
         REPS,
-        MAKE_DATE(Year, Month, Day) as Date
+        Date
     FROM 
         df_filtered
     ORDER BY 
@@ -113,7 +111,7 @@ with col3:
 df_max_weight = duckdb.sql(
     """
     SELECT 
-        MAKE_DATE(Year, Month, Day) as Date,
+        Date,
         Exercise_Name,
         MAX(Weight) as Max_Weight
     FROM
@@ -144,7 +142,7 @@ df_volume = duckdb.sql(
         SUM(Volume) as Volume
     FROM (
         SELECT 
-            MAKE_DATE(Year, Month, Day) as Date,
+            Date,
             Exercise_Name,
             SUM(Reps) * CASE WHEN Weight = 0 THEN 1 ELSE Weight END AS Volume
         FROM
@@ -178,13 +176,13 @@ st.plotly_chart(fig_volume)
 df_sum_reps = duckdb.sql(
     """
     SELECT 
-        MAKE_DATE(Year, Month, Day) as Date,
+        Date,
         Exercise_Name,
         SUM(Reps) as Total_Reps
     FROM
         df_filtered
     GROUP BY
-        Month, Day, Year, Exercise_Name
+        Date, Exercise_Name
     ORDER BY
         Date;
     """
