@@ -13,10 +13,6 @@ st.set_page_config(
 
 st.title("Progressive Overload Dashboard")
 
-bodyPartDict = {
-
-}
-
 @st.cache_data
 def load_data(path:str):
     data = pd.read_csv(path)
@@ -46,11 +42,12 @@ with st.sidebar:
     st.header("Configuration")
     uploaded_file = st.file_uploader("Choose a file")
 
+# Dataset
 if uploaded_file is None:
-    st.info(" Upload a file through config", icon=':material/info:')
-    st.stop()
-
-df = load_data(uploaded_file)
+    st.info(" This is a sample dataset. Use Configuration to upload a unique CSV file.", icon=':material/info:')
+    df = load_data('data/strong_2.csv')
+else:
+    df =load_data(uploaded_file)
 
 # Filters
 with st.sidebar: 
@@ -70,9 +67,6 @@ f"""
         AND EXERCISE_NAME = '{exercise}'
 """
 ).fetchdf()
-print(df_filtered)
-# debugging
-# st.dataframe(df_filtered)
 
 # ------ KPIs ------
 maxWeightdf = duckdb.sql(
@@ -159,9 +153,6 @@ else:
         """
     ).fetchdf()
 
-    # debugging
-    # st.dataframe(df_volume)
-
     fig_volume = px.line(
         df_volume,
         x="Date",
@@ -197,9 +188,6 @@ else:
     )
     fig_reps.update_yaxes(rangemode="tozero")
     st.plotly_chart(fig_reps)
-
-# st.dataframe(df_filtered)
-# st.dataframe(df_sum_reps)
 
 #TODO 
 # Simplify filtering: add another selectbox, ex: body part & Category, so that when you select an exercise there are less choices
