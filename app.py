@@ -4,7 +4,6 @@ import pandas as pd
 import duckdb
 import plotly.express as px
 import numpy as np
-import sys
 
 st.set_page_config(
     page_title="Progressive Overload Dashboard",
@@ -27,9 +26,6 @@ def load_data(path:str):
 
     # replace Date column with Month, Day, and Year
     data['Date'] = pd.to_datetime(data['Date'])
-    # data['Month'] = data['Date'].dt.month
-    # data['Day'] = data['Date'].dt.day
-    # data['Year'] = data['Date'].dt.year
 
     # drop columns
     data = data[[
@@ -93,110 +89,114 @@ maxWeightdf = duckdb.sql(
     """
 ).fetchdf()
 
-maxWeight = maxWeightdf.iloc[0][0]
-maxWeightReps = maxWeightdf.iloc[0][1]
-maxWeightDate = maxWeightdf.iloc[0][2]
+if maxWeightdf.empty:
+    st.warning('No data available for this exercise and date range.')
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Max Weight (lbs)", value=maxWeight)
+else:
+    maxWeight = maxWeightdf.iloc[0][0]
+    maxWeightReps = maxWeightdf.iloc[0][1]
+    maxWeightDate = maxWeightdf.iloc[0][2]
 
-with col2:
-    st.metric(f"Max Reps @ {maxWeight} lbs", value=maxWeightReps)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Max Weight (lbs)", value=maxWeight)
 
-with col3:
-    st.metric("Max Weight Date",value=f"{maxWeightDate.month}/{maxWeightDate.day}/{maxWeightDate.year}")
+    with col2:
+        st.metric(f"Max Reps @ {maxWeight} lbs", value=maxWeightReps)
 
-# ------ Max Weight Over Time ------
-df_max_weight = duckdb.sql(
-    """
-    SELECT 
-        Date,
-        Exercise_Name,
-        MAX(Weight) as Max_Weight
-    FROM
-        df_filtered
-    GROUP BY
-        Date, Exercise_Name
-    ORDER BY
-        Date;
-    """
-).fetchdf()
+    with col3:
+        st.metric("Max Weight Date",value=f"{maxWeightDate.month}/{maxWeightDate.day}/{maxWeightDate.year}")
 
-fig_weight = px.line(
-    df_max_weight,
-    x="Date",
-    y="Max_Weight",
-    markers=True,
-    title= f"Weight Over Time"
-)
-fig_weight.update_yaxes(rangemode="tozero")
-st.plotly_chart(fig_weight)
-
-# ------ Volume Over Time ------
-df_volume = duckdb.sql(
-    """
-    SELECT
-        Date,
-        Exercise_Name,
-        SUM(Volume) as Volume
-    FROM (
+    # ------ Max Weight Over Time ------
+    df_max_weight = duckdb.sql(
+        """
         SELECT 
             Date,
             Exercise_Name,
-            SUM(Reps) * CASE WHEN Weight = 0 THEN 1 ELSE Weight END AS Volume
+            MAX(Weight) as Max_Weight
         FROM
             df_filtered
         GROUP BY
-            Date, Exercise_Name, Weight
+            Date, Exercise_Name
         ORDER BY
-            Date
-    ) 
-    GROUP By 
-        Date, Exercise_Name
-    ORDER BY
-        DATE;
-    """
-).fetchdf()
+            Date;
+        """
+    ).fetchdf()
 
-# debugging
-# st.dataframe(df_volume)
+    fig_weight = px.line(
+        df_max_weight,
+        x="Date",
+        y="Max_Weight",
+        markers=True,
+        title= f"Weight Over Time"
+    )
+    fig_weight.update_yaxes(rangemode="tozero")
+    st.plotly_chart(fig_weight)
 
-fig_volume = px.line(
-    df_volume,
-    x="Date",
-    y="Volume",
-    markers=True,
-    title= f"Volume Over Time"
-)
-fig_volume.update_yaxes(rangemode="tozero")
-st.plotly_chart(fig_volume)
+    # ------ Volume Over Time ------
+    df_volume = duckdb.sql(
+        """
+        SELECT
+            Date,
+            Exercise_Name,
+            SUM(Volume) as Volume
+        FROM (
+            SELECT 
+                Date,
+                Exercise_Name,
+                SUM(Reps) * CASE WHEN Weight = 0 THEN 1 ELSE Weight END AS Volume
+            FROM
+                df_filtered
+            GROUP BY
+                Date, Exercise_Name, Weight
+            ORDER BY
+                Date
+        ) 
+        GROUP By 
+            Date, Exercise_Name
+        ORDER BY
+            DATE;
+        """
+    ).fetchdf()
 
-# ------ Reps Over Time ------
-df_sum_reps = duckdb.sql(
-    """
-    SELECT 
-        Date,
-        Exercise_Name,
-        SUM(Reps) as Total_Reps
-    FROM
-        df_filtered
-    GROUP BY
-        Date, Exercise_Name
-    ORDER BY
-        Date;
-    """
-).fetchdf()
+    # debugging
+    # st.dataframe(df_volume)
 
-fig_reps = px.line(
-    df_sum_reps,
-    x="Date",
-    y="Total_Reps",
-    markers=True,
-    title= f"Reps Over Time"
-)
-fig_reps.update_yaxes(rangemode="tozero")
-st.plotly_chart(fig_reps)
+    fig_volume = px.line(
+        df_volume,
+        x="Date",
+        y="Volume",
+        markers=True,
+        title= f"Volume Over Time"
+    )
+    fig_volume.update_yaxes(rangemode="tozero")
+    st.plotly_chart(fig_volume)
+
+    # ------ Reps Over Time ------
+    df_sum_reps = duckdb.sql(
+        """
+        SELECT 
+            Date,
+            Exercise_Name,
+            SUM(Reps) as Total_Reps
+        FROM
+            df_filtered
+        GROUP BY
+            Date, Exercise_Name
+        ORDER BY
+            Date;
+        """
+    ).fetchdf()
+
+    fig_reps = px.line(
+        df_sum_reps,
+        x="Date",
+        y="Total_Reps",
+        markers=True,
+        title= f"Reps Over Time"
+    )
+    fig_reps.update_yaxes(rangemode="tozero")
+    st.plotly_chart(fig_reps)
 
 # st.dataframe(df_filtered)
 # st.dataframe(df_sum_reps)
