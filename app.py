@@ -44,7 +44,7 @@ with st.sidebar:
 
 # Dataset
 if uploaded_file is None:
-    st.info(" This is a sample dataset. Use Configuration to upload a unique CSV file.", icon=':material/info:')
+    st.info(" This is a sample dataset. Use Configuration to upload a unique CSV file. If you are uploading a unique CSV file, ensure the columns are named accordingly: Date, Exercise Name, Weight, Reps", icon=':material/info:')
     df = load_data('data/strong_2.csv')
 else:
     df =load_data(uploaded_file)
