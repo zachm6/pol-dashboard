@@ -51,9 +51,39 @@ else:
 
 # Filters
 with st.sidebar: 
-    exercise = st.selectbox(label="Select an Exercise", options=np.sort(df['Exercise_Name'].unique()))
     dateStart_str = st.date_input("Starting Date").strftime("%Y-%m-%d")
     dateEnd_str = st.date_input("Ending Date").strftime("%Y-%m-%d")
+
+    # compute counts of rows per exercise in the date range
+    exercise_counts = duckdb.sql(
+        f"""
+        SELECT
+            Exercise_Name, 
+            COUNT(*) AS Count
+        FROM 
+            df
+        WHERE 
+            Date Between DATE '{dateStart_str}' AND '{dateEnd_str}'
+        GROUP BY
+            Exercise_Name
+        ORDER BY 
+            Exercise_Name
+        """
+    ).fetchdf()
+
+    if exercise_counts.empty:
+        st.warning("No exercises found in this date range.")
+        st.stop()
+
+    # build label => value mapping
+    options = {
+        f"({row.Count}) {row.Exercise_Name}": row.Exercise_Name
+        for row in exercise_counts.itertuples(index=False)
+    }
+
+    # selectbox with labels including counts
+    selected_label = st.selectbox("Select an Exercise", options=list(options.keys()))
+    exercise = options[selected_label]
 
 # Visualizations
 df_filtered = duckdb.sql(
