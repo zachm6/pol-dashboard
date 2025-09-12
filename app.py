@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import duckdb
 import plotly.express as px
-import numpy as np
+import datetime
 
 st.set_page_config(
     page_title="Progressive Overload Dashboard",
@@ -50,8 +50,9 @@ else:
     df =load_data(uploaded_file)
 
 # Filters
-with st.sidebar: 
-    dateStart_str = st.date_input("Starting Date").strftime("%Y-%m-%d")
+with st.sidebar:
+    twentyOneDaysAgo = datetime.date.today() - datetime.timedelta(days=21)
+    dateStart_str = st.date_input(label="Starting Date", value=twentyOneDaysAgo).strftime("%Y-%m-%d")
     dateEnd_str = st.date_input("Ending Date").strftime("%Y-%m-%d")
 
     # compute counts of rows per exercise in the date range
